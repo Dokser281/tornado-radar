@@ -3,60 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>RADAR v14.3</title>
+    <title>RADAR v16.4</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        :root { --bg: #000; --card: #0a0a0a; --border: #1a1a1a; --accent: #ff3b30; --safe: #34c759; --blue: #007aff; }
+        :root { --bg: #000; --card: #0a0a0a; --border: #1a1a1a; --accent: #ff3b30; --blue: #007aff; }
         body { margin: 0; background: var(--bg); color: #fff; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
         
-        #update-modal {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9); z-index: 20000;
-            display: none; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box;
-        }
-        .modal-content {
-            background: var(--card); border: 1px solid var(--border);
-            padding: 25px; border-radius: 24px; max-width: 350px; width: 100%;
-            text-align: left; box-shadow: 0 0 30px rgba(0,122,255,0.2);
-        }
-        .modal-content h2 { margin-top: 0; color: var(--blue); font-size: 18px; text-transform: uppercase; }
-        .close-btn { background: var(--blue); color: white; border: none; width: 100%; padding: 12px; border-radius: 12px; font-weight: bold; cursor: pointer; }
-
-        .live-tag { position: absolute; top: 15px; right: 15px; display: flex; align-items: center; background: rgba(0,0,0,0.8); padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border); z-index: 10001; }
-        .live-dot { width: 7px; height: 7px; background: var(--accent); border-radius: 50%; margin-right: 6px; animation: blink 1s infinite; }
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-
         #auth-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 10000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-        #main-ui { width: 100%; max-width: 900px; margin: 0 auto; padding: 10px; display: none; box-sizing: border-box; }
-        #map { height: 55vh; border-radius: 20px; border: 1px solid var(--border); background: #000; margin-bottom: 10px; }
+        #main-ui { width: 100%; max-width: 900px; margin: 0 auto; padding: 10px; display: none; box-sizing: border-box; height: 100vh; }
         
-        .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
-        .info-card { background: var(--card); border: 1px solid var(--border); padding: 12px; border-radius: 15px; text-align: center; }
-        .info-card b { font-size: 18px; color: var(--blue); display: block; margin-top: 4px; }
-        .info-card span { font-size: 9px; opacity: 0.4; text-transform: uppercase; display: block; }
+        #map { height: 70vh; border-radius: 20px; border: 1px solid var(--border); background: #000; margin-bottom: 15px; }
+        
+        .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .info-card { background: var(--card); border: 1px solid var(--border); padding: 15px; border-radius: 15px; text-align: center; }
+        .info-card b { font-size: 16px; color: var(--blue); display: block; margin-top: 5px; }
+        .info-card span { font-size: 9px; opacity: 0.4; text-transform: uppercase; }
         
         .btn-start { background: var(--blue); color: #fff; border: none; padding: 20px 50px; border-radius: 15px; font-size: 18px; font-weight: 900; cursor: pointer; text-transform: uppercase; }
         
-        .tornado-dot { width: 18px; height: 18px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 15px var(--accent); animation: pulse 0.8s infinite; }
-        @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(2.5); opacity: 0; } 100% { transform: scale(1); opacity: 0; } }
+        .tornado-marker { 
+            font-size: 40px; text-align: center; 
+            animation: spin var(--speed, 2s) infinite linear; 
+            filter: drop-shadow(0 0 15px red);
+            cursor: pointer;
+        }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        
+        .leaflet-popup-content-wrapper { background: var(--card); color: #fff; border: 1px solid var(--border); border-radius: 12px; font-family: sans-serif; }
+        .leaflet-popup-tip { background: var(--card); }
     </style>
 </head>
 <body>
-
-<div id="update-modal">
-    <div class="modal-content">
-        <h2>ОБНОВЛЕНИЕ v14.3</h2>
-        <ul style="font-size: 13px; color: #ccc; padding-left: 20px;">
-            <li>Исправлено зависание данных ветра и давления.</li>
-            <li>Добавлена очистка кэша API.</li>
-            <li>Улучшена стабильность на мобильных устройствах.</li>
-        </ul>
-        <button class="close-btn" onclick="closeUpdates()">ПОНЯТНО</button>
-    </div>
-</div>
-
-<div class="live-tag"><div class="live-dot"></div><span style="font-size: 9px; font-weight: bold;">LIVE</span></div>
 
 <div id="auth-screen">
     <div style="font-size: 60px; margin-bottom: 25px;">🌪️</div>
@@ -64,85 +42,100 @@
 </div>
 
 <div id="main-ui">
-    <div id="status-box" style="background: var(--card); border: 1px solid var(--border); padding: 15px; border-radius: 18px; text-align: center; margin-bottom: 10px;">
-        <div id="status-text" style="font-size: 20px; font-weight: 900; text-transform: uppercase;">СКАНИРОВАНИЕ...</div>
-    </div>
     <div id="map"></div>
+
     <div class="info-grid">
-        <div class="info-card"><span>ВЕТЕР</span><b id="wind-val">--</b></div>
-        <div class="info-card"><span>ДАВЛЕНИЕ</span><b id="press-val">--</b></div>
-        <div class="info-card"><span>ШКАЛА</span><b id="fujita-rank" style="color:var(--accent)">F--</b></div>
-    </div>
-    <div style="padding: 10px; display: flex; justify-content: space-between; font-size: 10px; color: #333; font-weight: bold;">
-        <span>РЕКОРД: <span id="max-val">0</span> КМ/Ч</span>
-        <span>v14.3 STABLE</span>
+        <div class="info-card"><span>ОБЪЕКТЫ</span><b id="obj-val">0</b></div>
+        <div class="info-card"><span>MAX ВЕТЕР</span><b id="wind-val">--</b></div>
+        <div class="info-card"><span>СТАТУС</span><b id="f-val" style="color: var(--blue)">ACTIVE</b></div>
     </div>
 </div>
 
 <script>
-    const CURRENT_VERSION = "14.3";
-    let map, damageZone, tornadoPath;
-    let pathCoords = [];
-    let maxWind = localStorage.getItem('maxW') || 0;
-    document.getElementById('max-val').innerText = maxWind;
+    let map, activeTornadoes = {};
+    const points = [
+        {id: 1, lat: 35.4, lon: -97.5, name: 'Oklahoma', history: []}, 
+        {id: 2, lat: 39.1, lon: -95.7, name: 'Kansas', history: []}, 
+        {id: 3, lat: 49.9, lon: 36.2, name: 'Kharkiv', history: []}, 
+        {id: 4, lat: 31.9, lon: -99.9, name: 'Texas', history: []},
+        {id: 5, lat: 51.5, lon: -0.1, name: 'London', history: []},
+        {id: 6, lat: 35.6, lon: 139.7, name: 'Tokyo', history: []}
+    ];
 
-    function checkUpdates() {
-        const lastVersion = localStorage.getItem('lastVersion');
-        if (lastVersion !== CURRENT_VERSION) {
-            document.getElementById('update-modal').style.display = 'flex';
-        }
-    }
-
-    function closeUpdates() {
-        localStorage.setItem('lastVersion', CURRENT_VERSION);
-        document.getElementById('update-modal').style.display = 'none';
+    function getFujita(w) {
+        if (w < 117) return "F0";
+        if (w < 181) return "F1";
+        if (w < 253) return "F2";
+        return "F3+";
     }
 
     function launch() {
         document.getElementById('auth-screen').style.display = 'none';
         document.getElementById('main-ui').style.display = 'block';
-        checkUpdates();
-        
-        setTimeout(() => {
-            map = L.map('map', { zoomControl: false }).setView([49.99, 36.23], 11);
+        if (!map) {
+            map = L.map('map', { zoomControl: false }).setView([20, 0], 2);
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
             update();
-            setInterval(update, 15000); // 15 секунд для экономии трафика
-        }, 100);
+            setInterval(update, 10000); 
+        }
     }
 
     async function update() {
-        try {
-            // Добавляем случайное число в конец ссылки, чтобы данные не кэшировались
-            const cacheBuster = Math.random();
-            const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=49.99&longitude=36.23&current=weather_code,wind_gusts_10m,pressure_msl&_=${cacheBuster}`);
-            const data = await res.json();
-            const c = data.current;
-            const wind = Math.round(c.wind_gusts_10m);
-            const press = Math.round(c.pressure_msl);
+        let found = 0;
+        let topW = 0;
 
-            document.getElementById('wind-val').innerText = wind + " КМ/Ч";
-            document.getElementById('press-val').innerText = press + " HPA";
-            
-            let f = "F0";
-            if(wind > 117) f = "F1"; if(wind > 181) f = "F2"; if(wind > 253) f = "F3";
-            document.getElementById('fujita-rank').innerText = f;
+        for (let p of points) {
+            try {
+                const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${p.lat}&longitude=${p.lon}&current=wind_gusts_10m,wind_direction_10m&_=${Date.now()}`);
+                const data = await res.json();
+                const wind = Math.round(data.current.wind_gusts_10m);
+                const angle = data.current.wind_direction_10m;
 
-            if (wind > maxWind) {
-                maxWind = wind;
-                localStorage.setItem('maxW', maxWind);
-                document.getElementById('max-val').innerText = maxWind;
-            }
+                if (wind > topW) topW = wind;
 
-            const txt = document.getElementById('status-text');
-            if (wind > 100 || c.weather_code === 99) {
-                txt.innerText = "ЕСТЬ ТОРНАДО!"; txt.style.color = "var(--accent)";
-                if (!damageZone) damageZone = L.circle([49.99, 36.23], {color: 'red', fillOpacity: 0.2, radius: 2500, weight: 1}).addTo(map);
-            } else {
-                txt.innerText = "ТОРНАДО СЕГОДНЯ НЕ БУДЕТ"; txt.style.color = "var(--safe)";
-                if (damageZone) { map.removeLayer(damageZone); damageZone = null; }
-            }
-        } catch (e) { console.log("API Error"); }
+                if (wind > 30) { 
+                    found++;
+                    let spinSpeed = 2 - (wind / 150);
+                    if(spinSpeed < 0.1) spinSpeed = 0.1;
+
+                    const rad = angle * (Math.PI / 180);
+                    p.lat += Math.cos(rad) * 0.02;
+                    p.lon += Math.sin(rad) * 0.02;
+                    
+                    p.history.push([p.lat, p.lon]);
+                    if(p.history.length > 10) p.history.shift();
+
+                    const fRank = getFujita(wind);
+
+                    if (activeTornadoes[p.id]) {
+                        activeTornadoes[p.id].marker.setLatLng([p.lat, p.lon]);
+                        activeTornadoes[p.id].marker._icon.style.setProperty('--speed', spinSpeed + 's');
+                        activeTornadoes[p.id].line.setLatLngs(p.history);
+                        activeTornadoes[p.id].marker.getPopup().setContent(`<b>${p.name}</b><br>Ветер: ${wind} км/ч<br>Ранг: ${fRank}`);
+                    } else {
+                        const m = L.marker([p.lat, p.lon], {
+                            icon: L.divIcon({ 
+                                className: 'none', 
+                                html: `<div class="tornado-marker" style="--speed: ${spinSpeed}s">🌪️</div>`, 
+                                iconSize: [40, 40] 
+                            })
+                        }).addTo(map).bindPopup(`<b>${p.name}</b><br>Ветер: ${wind} км/ч<br>Ранг: ${fRank}`);
+                        
+                        const l = L.polyline(p.history, {color: 'red', weight: 2, dashArray: '5, 10', opacity: 0.4}).addTo(map);
+                        activeTornadoes[p.id] = { marker: m, line: l };
+                    }
+                } else {
+                    if (activeTornadoes[p.id]) {
+                        map.removeLayer(activeTornadoes[p.id].marker);
+                        map.removeLayer(activeTornadoes[p.id].line);
+                        delete activeTornadoes[p.id];
+                        p.history = [];
+                    }
+                }
+            } catch (e) {}
+        }
+        document.getElementById('obj-val').innerText = found;
+        document.getElementById('wind-val').innerText = topW + " КМ/Ч";
     }
 </script>
 </body>
